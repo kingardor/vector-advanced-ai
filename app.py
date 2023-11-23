@@ -3,13 +3,21 @@ import numpy as np
 import cv2
 import anki_vector
 
-def sleep(function):
-    def wrapper(*args, **kwargs):
-        retval = function(*args, **kwargs)
-        print("Sleeping for 0.25 seconds...")
+def sleep(func):
+    def exec(*args, **kwargs):
+        retval = func(*args, **kwargs)
         time.sleep(0.25)
         return retval
-    return wrapper
+    return exec
+
+def latency(func):
+    def exec(*args, **kwargs):
+        start = time.time()
+        retval = func(*args, **kwargs)
+        end = time.time()
+        print("Execution time {}: {}".format(func.__name__, end - start))
+        return retval
+    return exec
 
 class Data:
     def __init__(self, robot: anki_vector.Robot) -> None:
@@ -27,11 +35,13 @@ class Action:
         self.robot = robot
     
     @sleep
+    @latency
     def tts(self, text: str) -> None:
         print("{}".format(text))
         self.robot.behavior.say_text(text)
     
     @sleep
+    @latency
     def eyecolor(self, hue: float, saturation: float) -> None:
         self.robot.behavior.set_eye_color(hue=hue, saturation=saturation)
 
@@ -48,7 +58,7 @@ def main():
 
     robot.connect()
     robot.camera.init_camera_feed()
-
+        
     robot_action.eyecolor(1.0, 1.0)
     robot_action.tts("I'm alive!")
     robot_action.eyecolor(0.0, 0.0)    
