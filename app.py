@@ -1,6 +1,7 @@
 import time
 import numpy as np
 import cv2
+import concurrent.futures
 import anki_vector
 
 def sleep(func):
@@ -19,6 +20,39 @@ def latency(func):
         return retval
     return exec
 
+class VectorBot:
+    def __init__(
+            self, 
+            behavior_activation_timeout: float = 30.0, 
+            cache_animation_lists: bool = False
+        ) -> None:
+
+        args = anki_vector.util.parse_command_args()
+        self.robot = anki_vector.AsyncRobot(
+            args.serial,
+            behavior_activation_timeout=behavior_activation_timeout,
+            cache_animation_lists=cache_animation_lists
+        )
+
+        self.robot.connect()
+
+        # Initialize the camera feed
+        self.robot.camera.init_camera_feed()
+
+        # Load the animation triggers
+        result = self.robot.anim.load_animation_list()
+        time.sleep(2.0)
+        if isinstance(result, concurrent.futures.Future):
+            result.result()
+        
+        result = self.robot.anim.load_animation_trigger_list()
+        time.sleep(2.0)
+        if isinstance(result, concurrent.futures.Future):
+            result.result()
+
+        # Get off the charger
+        self.robot.behavior.drive_off_charger()
+        
 class Data:
     def __init__(self, robot: anki_vector.Robot) -> None:
         self.robot = robot
@@ -44,23 +78,22 @@ class Action:
     @latency
     def eyecolor(self, hue: float, saturation: float) -> None:
         self.robot.behavior.set_eye_color(hue=hue, saturation=saturation)
+    
+    @sleep
+    @latency
+    def animation(self, name: str) -> None:
+        print("Playing Animation: {}".format(name))
+        self.robot.anim.play_animation_trigger(name)
 
 def main():
-    args = anki_vector.util.parse_command_args()
-    robot = anki_vector.Robot(
-        args.serial,
-        behavior_activation_timeout=30.0,
-        cache_animation_lists=False
-    )
+    
+    vectorbot = VectorBot()
+    robot_action = Action(vectorbot.robot)
+    robot_data = Data(vectorbot.robot)
 
-    robot_action = Action(robot)
-    robot_data = Data(robot)
-
-    robot.connect()
-    robot.camera.init_camera_feed()
-        
     robot_action.eyecolor(1.0, 1.0)
-    robot_action.tts("I'm alive!")
+    robot_action.animation('GreetAfterLongTime')
+    robot_action.tts("Hi James!")
     robot_action.eyecolor(0.0, 0.0)    
     
     while True:
@@ -71,7 +104,7 @@ def main():
             break
     
     cv2.destroyAllWindows()
-    robot.disconnect()
+    vectorbot.robot.disconnect()
 
 if __name__ == "__main__":
     main()
