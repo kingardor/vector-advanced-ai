@@ -1,8 +1,13 @@
+import sys
+sys.path.insert(1, 'src')
+
 import time
 import numpy as np
+import PIL.Image
 import cv2
 import concurrent.futures
 import anki_vector
+import owl
 
 def sleep(func):
     def exec(*args, **kwargs):
@@ -25,7 +30,7 @@ class VectorBot:
             self, 
             behavior_activation_timeout: float = 30.0, 
             cache_animation_lists: bool = False
-        ) -> None:
+    ) -> None:
 
         args = anki_vector.util.parse_command_args()
         self.robot = anki_vector.AsyncRobot(
@@ -58,10 +63,15 @@ class Data:
         self.robot = robot
     
     @sleep
-    def getframe(self) -> np.ndarray:
+    def get_numpy_frame(self) -> np.ndarray:
         frame = self.robot.camera.latest_image.raw_image
         frame = np.array(frame)
         frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+        return frame
+
+    @sleep
+    def get_pil_frame(self) -> PIL.Image.Image:
+        frame = self.robot.camera.latest_image.raw_image
         return frame
     
 class Action:
@@ -87,6 +97,8 @@ class Action:
 
 def main():
     
+    owlpred = owl.HootHoot()
+
     vectorbot = VectorBot()
     robot_action = Action(vectorbot.robot)
     robot_data = Data(vectorbot.robot)
@@ -97,8 +109,16 @@ def main():
     robot_action.eyecolor(0.0, 0.0)    
     
     while True:
-        frame = robot_data.getframe()
+        time.sleep(0.25)
+        frame = robot_data.get_pil_frame()
+        output, image = owlpred.predict(
+            frame, 
+            "[a person, toys]",
+            threshold=0.2
+        )
 
+        frame = np.array(image)
+        frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
         cv2.imshow("Vector", frame)
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
