@@ -6,6 +6,7 @@ import numpy as np
 import PIL.Image
 import cv2
 import concurrent.futures
+import traceback
 import anki_vector
 import owl
 
@@ -46,14 +47,22 @@ class VectorBot:
 
         # Load the animation triggers
         result = self.robot.anim.load_animation_list()
-        time.sleep(2.0)
-        if isinstance(result, concurrent.futures.Future):
-            result.result()
-        
+        while True:
+            try:
+                if isinstance(result, concurrent.futures.Future):
+                    result.result()
+                break
+            except:
+                print(traceback.format_exc())
+    
         result = self.robot.anim.load_animation_trigger_list()
-        time.sleep(2.0)
-        if isinstance(result, concurrent.futures.Future):
-            result.result()
+        while True:
+            try:
+                if isinstance(result, concurrent.futures.Future):
+                    result.result()
+                break
+            except:
+                print(traceback.format_exc())
 
         # Get off the charger
         self.robot.behavior.drive_off_charger()
@@ -64,14 +73,22 @@ class Data:
     
     @sleep
     def get_numpy_frame(self) -> np.ndarray:
-        frame = self.robot.camera.latest_image.raw_image
-        frame = np.array(frame)
-        frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+        try:
+            frame = self.robot.camera.latest_image.raw_image
+            frame = np.array(frame)
+            frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+        except:
+            frame = None
+            print(traceback.format_exc())
         return frame
 
     @sleep
     def get_pil_frame(self) -> PIL.Image.Image:
-        frame = self.robot.camera.latest_image.raw_image
+        try:
+            frame = self.robot.camera.latest_image.raw_image
+        except:
+            frame = None
+            print(traceback.format_exc())
         return frame
     
 class Action:
@@ -111,6 +128,8 @@ def main():
     while True:
         time.sleep(0.25)
         frame = robot_data.get_pil_frame()
+        if isinstance(frame, type(None)):
+            continue
         output, image = owlpred.predict(
             frame, 
             "[a person, toys]",
