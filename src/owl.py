@@ -9,7 +9,7 @@ class HootHoot:
     def __init__(
             self, 
             model: str = "google/owlvit-base-patch32",
-            onnx_path: str = "models/owlvit_image_encoder_patch32.onnx",
+            onnx_path: str = "models/nanoowl/owlvit_image_encoder_patch32.onnx",
             image_encoder_engine: str = "engines/owlvit_image_encoder_patch32.engine"
     ) -> None:
         
