@@ -1,7 +1,5 @@
 import os
-import numpy as np
-import sounddevice as sd
-from scipy.io.wavfile import write
+import time
 import sys
 sys.path.insert(1, 'src')
 
@@ -11,7 +9,11 @@ from speechstream import StreamHandler
 def main():
     try:
         handler = StreamHandler()
-        handler.listen()
+        while True:
+            if not isinstance(handler.stt_result, type(None)):
+                print('Output: {}'.format(handler.stt_result))
+                handler.stt_result = None
+            time.sleep(0.25)
     except (KeyboardInterrupt, SystemExit): pass
     finally:
         print("\n\033[93mQuitting..\033[0m")

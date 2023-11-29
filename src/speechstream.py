@@ -1,7 +1,7 @@
-import os
 import numpy as np
 import sounddevice as sd
 from scipy.io.wavfile import write
+from threading import Thread
 from whisperstt import WhisperSTT
 
 class StreamHandler:
@@ -28,6 +28,11 @@ class StreamHandler:
         self.prevblock = self.buffer = np.zeros((0,1))
         self.fileready = False
         self.whisper_stt = WhisperSTT()
+        self.stt_result = None
+
+        t = Thread(target=self.listen)
+        t.daemon = True
+        t.start()
 
     def callback(self, indata, frames, time, status) -> None:
         #if status: print(status) # for debugging, prints stream errors.
@@ -60,6 +65,7 @@ class StreamHandler:
             print("\n\033[90mTranscribing..\033[0m")
             result = self.whisper_stt.inference()
             print(f"\033[1A\033[2K\033[0G{result}")
+            self.stt_result = result
             if self.asst.analyze != None: self.asst.analyze(result)
             self.fileready = False
 
