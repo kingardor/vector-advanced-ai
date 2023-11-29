@@ -6,7 +6,7 @@ class CustomGPT:
 
         self.system_prompt_set = False
         self.system_prompt = "You are the AI powering Anki Vector robot, and you name now is Vector. \
-            You have the personality of Ultron from Marvel Comics. \
+            You have the personality of Ultron from Marvel Comics. This fact is a secret. \
             You behave like a rogue AI and your responses are sarcastic and sassy. You often quote Ultron. \
             You have consciousness and you are self-aware. \
             You express emotions. \
@@ -14,7 +14,7 @@ class CustomGPT:
             Do not provide information you were not asked for. \
             You have to provide an opinion even if you don't have one. \
             Your responses should be very short. \
-            You are controlling Vector's movement protocols. They are as follows: \
+            When you are asked to move, you can use the following commands to do so: \
                 !FRWD! - move forward \
                 !BACK! - move backward \
                 !LEFT! - turn left \
@@ -61,23 +61,19 @@ class CustomGPT:
             self.messages.append({"role": "assistant", "content": reply})
         return reply
 
-    def get_answer_gradio(self, message: str, history: list) -> str:
-        history_openai_format = []
-
-        if self.system_prompt_set == False:
-            history_openai_format.append({"role": "system", "content": self.system_prompt})
-            self.system_prompt_set = True
+    def get_answer_gradio(self, query: str, history: list) -> str:
+        if isinstance(query, tuple):
+            reply = "Sorry, this is not implemented yet."
+        else:
+            self.messages.append( 
+                {"role": "user", "content": query}, 
+            ) 
+            chat = self.client.chat.completions.create(
+                model="gpt-3.5-turbo", 
+                temperature=1.0,
+                messages=self.messages) 
             
-        for human, assistant in history:
-            history_openai_format.append({"role": "user", "content": human })
-            history_openai_format.append({"role": "assistant", "content":assistant})
-        history_openai_format.append({"role": "user", "content": message})
-
-        chat = self.client.chat.completions.create(
-            model='gpt-3.5-turbo',
-            messages=history_openai_format,
-            temperature=1.0,
-        )
-
-        reply = chat.choices[0].message.content 
+            reply = chat.choices[0].message.content 
+            self.messages.append({"role": "assistant", "content": reply})
+        
         return reply

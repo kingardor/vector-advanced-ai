@@ -6,7 +6,7 @@ import gradio as gr
 
 if __name__ == '__main__':
     gpt = CustomGPT()
-        
+
     gr.ChatInterface(
         gpt.get_answer_gradio,
         chatbot=gr.Chatbot(height=300),
