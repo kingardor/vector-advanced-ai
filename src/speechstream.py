@@ -12,7 +12,10 @@ class StreamHandler:
             blocksize: int = 30,
             threshold: float = 0.1,
             vocals: tuple = [50, 1000],
-            endblocks: int = 40) -> None:
+            endblocks: int = 40,
+            debug=False
+        ) -> None:
+        self.debug = debug
         if assist == None: 
             class fakeAsst(): running, talking, analyze = True, False, None
             self.asst = fakeAsst()  # anyone know a better way to do this?
@@ -35,14 +38,15 @@ class StreamHandler:
         t.start()
 
     def callback(self, indata, frames, time, status) -> None:
-        #if status: print(status) # for debugging, prints stream errors.
-        if not any(indata):
+
+        if not any(indata) and self.debug:
             print('\033[31m.\033[0m', end='', flush=True) # if no input, prints red dots
             return
 
         freq = np.argmax(np.abs(np.fft.rfft(indata[:, 0]))) * self.samplerate / frames
         if np.sqrt(np.mean(indata**2)) > self.threshold and self.vocals[0] <= freq <= self.vocals[1] and not self.asst.talking:
-            print('.', end='', flush=True)
+            if self.debug:
+                print('.', end='', flush=True)
             if self.padding < 1: self.buffer = self.prevblock.copy()
             self.buffer = np.concatenate((self.buffer, indata))
             self.padding = self.endblocks
@@ -62,9 +66,11 @@ class StreamHandler:
 
     def process(self) -> None:
         if self.fileready:
-            print("\n\033[90mTranscribing..\033[0m")
+            if self.debug:
+                print("\n\033[90mTranscribing..\033[0m")
             result = self.whisper_stt.inference()
-            print(f"\033[1A\033[2K\033[0G{result}")
+            if self.debug:
+                print(f"\033[1A\033[2K\033[0G{result}")
             self.stt_result = result
             if self.asst.analyze != None: self.asst.analyze(result)
             self.fileready = False
