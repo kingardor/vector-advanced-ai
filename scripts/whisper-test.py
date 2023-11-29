@@ -3,7 +3,6 @@ import time
 import sys
 sys.path.insert(1, 'src')
 
-from whisperstt import WhisperSTT
 from speechstream import StreamHandler
 
 def main():
