@@ -4,6 +4,8 @@ import numpy as np
 import cv2
 import PIL.Image
 import anki_vector
+from anki_vector.connection import ControlPriorityLevel
+
 import traceback
 
 def sleep(func):
@@ -32,12 +34,12 @@ class VectorBot:
         args = anki_vector.util.parse_command_args()
         self.robot = anki_vector.AsyncRobot(
             args.serial,
+            behavior_control_level=ControlPriorityLevel.OVERRIDE_BEHAVIORS_PRIORITY,
             behavior_activation_timeout=behavior_activation_timeout,
             cache_animation_lists=cache_animation_lists
         )
 
         self.robot.connect()
-
         # Initialize the camera feed
         self.robot.camera.init_camera_feed()
 
