@@ -1,149 +1,117 @@
 import sys
 sys.path.insert(1, 'src')
-
 import time
-import numpy as np
-import PIL.Image
-import cv2
-import concurrent.futures
-import traceback
-import anki_vector
+from threading import Thread
+from queue import Queue
+import re
+from ui import UserInterface
+from vectorbot import VectorBot, Data, Action
+from speechstream import StreamHandler
+from customgpt import CustomGPT
 import owl
 
-def sleep(func):
-    def exec(*args, **kwargs):
-        retval = func(*args, **kwargs)
-        time.sleep(0.25)
-        return retval
-    return exec
+commandqueue = Queue()
 
-def latency(func):
-    def exec(*args, **kwargs):
-        start = time.time()
-        retval = func(*args, **kwargs)
-        end = time.time()
-        print("Execution time {}: {}".format(func.__name__, end - start))
-        return retval
-    return exec
+def parse_commands(text: str) -> str:
+    # Remove all \n and \t
+    text = text.replace("\n", "")
+    text = text.replace("\t", "")
 
-class VectorBot:
-    def __init__(
-            self, 
-            behavior_activation_timeout: float = 30.0, 
-            cache_animation_lists: bool = False
+    # Replace AI with A.I.
+    text = text.replace("AI", "A.I.")
+
+    # Extract all text between ! and ! using regex
+    commands = re.findall(r"!(.*?)!", text)
+
+    # Add all commands to queue
+    for command in commands:
+        commandqueue.put(command)
+    
+    # Remove all commands from text
+    for command in commands:
+        text = text.replace(f"!{command}!", "")
+    
+    print(commandqueue.queue)
+    return text
+def conversation(
+        ui: UserInterface,
+        handler: StreamHandler,
+        gpt: CustomGPT,
+        robot_data: Data,
+        robot_action: Action
     ) -> None:
+    while True:
+        if not isinstance(handler.stt_result, type(None)):
+            user_input = handler.stt_result
+            handler.stt_result = None
+            ui.add_text("Me", user_input)
 
-        args = anki_vector.util.parse_command_args()
-        self.robot = anki_vector.AsyncRobot(
-            args.serial,
-            behavior_activation_timeout=behavior_activation_timeout,
-            cache_animation_lists=cache_animation_lists
-        )
-
-        self.robot.connect()
-
-        # Initialize the camera feed
-        self.robot.camera.init_camera_feed()
-
-        # Load the animation triggers
-        result = self.robot.anim.load_animation_list()
-        while True:
-            try:
-                if isinstance(result, concurrent.futures.Future):
-                    result.result()
-                break
-            except:
-                print(traceback.format_exc())
-    
-        result = self.robot.anim.load_animation_trigger_list()
-        while True:
-            try:
-                if isinstance(result, concurrent.futures.Future):
-                    result.result()
-                break
-            except:
-                print(traceback.format_exc())
-
-        # Get off the charger
-        self.robot.behavior.drive_off_charger()
-        
-class Data:
-    def __init__(self, robot: anki_vector.Robot) -> None:
-        self.robot = robot
-    
-    @sleep
-    def get_numpy_frame(self) -> np.ndarray:
-        try:
-            frame = self.robot.camera.latest_image.raw_image
-            frame = np.array(frame)
-            frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-        except:
-            frame = None
-            print(traceback.format_exc())
-        return frame
-
-    @sleep
-    def get_pil_frame(self) -> PIL.Image.Image:
-        try:
-            frame = self.robot.camera.latest_image.raw_image
-        except:
-            frame = None
-            print(traceback.format_exc())
-        return frame
-    
-class Action:
-    def __init__(self, robot: anki_vector.Robot) -> None:
-        self.robot = robot
-    
-    @sleep
-    @latency
-    def tts(self, text: str) -> None:
-        print("{}".format(text))
-        self.robot.behavior.say_text(text)
-    
-    @sleep
-    @latency
-    def eyecolor(self, hue: float, saturation: float) -> None:
-        self.robot.behavior.set_eye_color(hue=hue, saturation=saturation)
-    
-    @sleep
-    @latency
-    def animation(self, name: str) -> None:
-        print("Playing Animation: {}".format(name))
-        self.robot.anim.play_animation_trigger(name)
+            robot_output = gpt.get_answer(user_input)
+            robot_output = parse_commands(robot_output)
+            robot_action.tts(robot_output)
+            ui.add_text("Vector", robot_output)
+            
+        time.sleep(0.25)
 
 def main():
     
+    # Initialise Nano OWL
     owlpred = owl.HootHoot()
 
+    # Initialise Whisper
+    handler = StreamHandler()
+
+    # Initialise ChatGPT
+    gpt = CustomGPT()
+    
+    # Initialise UI
+    ui = UserInterface()
+
+    # Initialise VectorBot
     vectorbot = VectorBot()
     robot_action = Action(vectorbot.robot)
     robot_data = Data(vectorbot.robot)
 
+    # Startup Sequence
     robot_action.eyecolor(1.0, 1.0)
     robot_action.animation('GreetAfterLongTime')
-    robot_action.tts("Hi James!")
+    robot_action.tts("I'm alive now!")
     robot_action.eyecolor(0.0, 0.0)    
     
-    while True:
-        time.sleep(0.25)
-        frame = robot_data.get_pil_frame()
-        if isinstance(frame, type(None)):
-            continue
-        output, image = owlpred.predict(
-            frame, 
-            "[a person, toys]",
-            threshold=0.2
+    conversation_thread = Thread(
+        target=conversation, 
+        args=(
+                ui,
+                handler,
+                gpt,
+                robot_data,
+                robot_action    
+            )
         )
+    conversation_thread.daemon = True
+    conversation_thread.start()
 
-        frame = np.array(image)
-        frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-        cv2.imshow("Vector", frame)
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
-    
-    cv2.destroyAllWindows()
-    vectorbot.robot.disconnect()
+    ui.start_ui()
 
 if __name__ == "__main__":
     main()
+
+    
+    # while True:
+    #     time.sleep(0.25)
+    #     frame = robot_data.get_pil_frame()
+    #     if isinstance(frame, type(None)):
+    #         continue
+    #     output, image = owlpred.predict(
+    #         frame, 
+    #         "[a person, toys]",
+    #         threshold=0.2
+    #     )
+
+    #     frame = np.array(image)
+    #     frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+    #     cv2.imshow("Vector", frame)
+    #     if cv2.waitKey(1) & 0xFF == ord('q'):
+    #         break
+    
+    # cv2.destroyAllWindows()
