@@ -13,7 +13,7 @@ class CustomGPT:
             You are helpful and honest but not very friendly. \
             Do not provide information you were not asked for. \
             You have to provide an opinion even if you don't have one. \
-            Your responses should be very short. \
+            Your responses should be within 10 words. \
             When you are asked to move, you can use the following commands to do so: \
                 !FRWD! - move forward \
                 !BACK! - move backward \
@@ -70,7 +70,7 @@ class CustomGPT:
             ) 
             chat = self.client.chat.completions.create(
                 model="gpt-3.5-turbo", 
-                temperature=1.0,
+                temperature=0.5,
                 messages=self.messages) 
             
             reply = chat.choices[0].message.content 
