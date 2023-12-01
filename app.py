@@ -4,11 +4,13 @@ import time
 from threading import Thread
 from queue import Queue
 import re
+import owl
+
+# Source
 from ui import UserInterface
 from vectorbot import VectorBot, Data, Action
 from speechstream import StreamHandler
 from customgpt import CustomGPT
-import owl
 
 commandqueue = Queue()
 
