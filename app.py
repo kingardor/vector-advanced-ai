@@ -35,6 +35,7 @@ def parse_commands(text: str) -> str:
     
     print(commandqueue.queue)
     return text
+   
 def conversation(
         ui: UserInterface,
         handler: StreamHandler,
@@ -42,7 +43,13 @@ def conversation(
         robot_data: Data,
         robot_action: Action
     ) -> None:
+
     while True:
+        # Listening emote
+        if handler.speaking:
+            robot_action.emote('VC_ListeningGetIn')
+        else:
+            robot_action.emote('VC_ListeningGetOut')
         if not isinstance(handler.stt_result, type(None)):
             user_input = handler.stt_result
             handler.stt_result = None
@@ -57,6 +64,11 @@ def conversation(
 
 def main():
     
+    # Initialise VectorBot
+    vector = VectorBot()
+    robot_action = Action(vector.robot)
+    robot_data = Data(vector.robot)
+
     # Initialise Nano OWL
     owlpred = owl.HootHoot()
 
@@ -68,15 +80,10 @@ def main():
     
     # Initialise UI
     ui = UserInterface()
-
-    # Initialise VectorBot
-    vectorbot = VectorBot()
-    robot_action = Action(vectorbot.robot)
-    robot_data = Data(vectorbot.robot)
-
+    
     # Startup Sequence
     robot_action.eyecolor(1.0, 1.0)
-    robot_action.animation('GreetAfterLongTime')
+    robot_action.emote('GreetAfterLongTime')
     robot_action.tts("I'm alive now!")
     robot_action.eyecolor(0.0, 0.0)    
     
