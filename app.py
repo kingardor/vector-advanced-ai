@@ -44,20 +44,27 @@ def conversation(
         robot_action: Action
     ) -> None:
 
+    speaking_complete = True
     while True:
         # Listening emote
         if handler.speaking:
-            robot_action.emote('VC_ListeningGetIn')
+            speaking_complete = False
+            robot_action.emote('OnboardingWakeWordGetIn')
         else:
-            robot_action.emote('VC_ListeningGetOut')
+            speaking_complete = True
+            if not speaking_complete:
+                robot_action.emote('OnboardingWakeWordSuccess')
         if not isinstance(handler.stt_result, type(None)):
             user_input = handler.stt_result
             handler.stt_result = None
             ui.add_text("Me", user_input)
 
+            robot_action.emote('KnowledgeGraphListening')
             robot_output = gpt.get_answer(user_input)
+            robot_action.emote('KnowledgeGraphSearchingGetOutSuccess')
             robot_output = parse_commands(robot_output)
             robot_action.tts(robot_output)
+            robot_action.emote('NeutralFace')
             ui.add_text("Vector", robot_output)
             
         time.sleep(0.25)
@@ -82,7 +89,8 @@ def main():
     ui = UserInterface()
     
     # Startup Sequence
-    robot_action.eyecolor(1.0, 1.0)
+
+    robot_action.emote('MessagingMessageGetIn')
     robot_action.emote('GreetAfterLongTime')
     robot_action.tts("I'm alive now!")
     robot_action.eyecolor(0.0, 0.0)    
