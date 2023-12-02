@@ -89,7 +89,8 @@ class VectorBot:
         self.robot.camera.init_camera_feed()
 
         # Get off the charger
-        if self.robot.status.is_on_charger and self.battery_level > 25:
+        # Battery levels are 0, 1, 2, 3
+        if self.robot.status.is_on_charger and self.battery_level > 1:
             self.robot.behavior.drive_off_charger()
         else:
             print(f"Battery level {self.battery_level} too low to drive off charger")
