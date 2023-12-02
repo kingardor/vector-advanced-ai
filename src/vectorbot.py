@@ -67,8 +67,9 @@ class VectorBot:
                 pass
 
         # Get off the charger
-        # self.robot.behavior.drive_off_charger()
-    
+        if self.robot.status.is_on_charger:
+            self.robot.behavior.drive_off_charger()
+        
     def __del__(self) -> None:
         self.robot.disconnect()
         
