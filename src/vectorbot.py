@@ -36,7 +36,7 @@ class VectorBot:
             time.sleep(0.25)
 
         if self.battery_state:
-            self.batt = self.battery_state.battery_level
+            self.battery_level = self.battery_state.battery_level
 
     def load_animations(self) -> None:
         # Load the animation triggers
@@ -88,6 +88,8 @@ class VectorBot:
         # Get off the charger
         if self.robot.status.is_on_charger and self.battery_level > 25:
             self.robot.behavior.drive_off_charger()
+        else:
+            print(f"Battery level {self.battery_level} too low to drive off charger")
         
     def __del__(self) -> None:
         self.robot.disconnect()
