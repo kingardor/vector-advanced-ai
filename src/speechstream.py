@@ -32,25 +32,27 @@ class StreamHandler:
         self.fileready = False
         self.whisper_stt = WhisperSTT()
         self.stt_result = None
+        self.speaking = False
 
         t = Thread(target=self.listen)
         t.daemon = True
         t.start()
 
-    def callback(self, indata, frames, time, status) -> None:
-
+    def callback(self, indata, frames, t, status) -> None:
         if not any(indata) and self.debug:
             print('\033[31m.\033[0m', end='', flush=True) # if no input, prints red dots
             return
 
         freq = np.argmax(np.abs(np.fft.rfft(indata[:, 0]))) * self.samplerate / frames
         if np.sqrt(np.mean(indata**2)) > self.threshold and self.vocals[0] <= freq <= self.vocals[1] and not self.asst.talking:
+            self.speaking = True
             if self.debug:
                 print('.', end='', flush=True)
             if self.padding < 1: self.buffer = self.prevblock.copy()
             self.buffer = np.concatenate((self.buffer, indata))
             self.padding = self.endblocks
         else:
+            self.speaking = False
             self.padding -= 1
             if self.padding > 1:
                 self.buffer = np.concatenate((self.buffer, indata))
