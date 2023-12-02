@@ -22,8 +22,8 @@ def parse_commands(text: str) -> str:
     # Replace AI with A.I.
     text = text.replace("AI", "A.I.")
 
-    # Extract all text between ! and ! using regex
-    commands = re.findall(r"!(.*?)!", text)
+    # Extract all text between @ and @
+    commands = re.findall(r'@(.*?)@', text) 
 
     # Add all commands to queue
     for command in commands:
