@@ -82,6 +82,9 @@ class VectorBot:
         self.battery_level = 0
         self.get_battery_details()
 
+        # Load animations
+        self.load_animations()
+
         # Initialize the camera feed
         self.robot.camera.init_camera_feed()
 
@@ -126,7 +129,11 @@ class Action:
     @latency
     def tts(self, text: str) -> None:
         print("{}".format(text))
-        self.robot.behavior.say_text(text)
+        self.robot.behavior.say_text(
+            text=text,
+            use_vector_voice=True,
+            duration_scalar=0.8
+        )
     
     @sleep
     @latency
