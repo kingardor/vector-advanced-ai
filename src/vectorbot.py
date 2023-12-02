@@ -25,24 +25,20 @@ def latency(func):
     return exec
 
 class VectorBot:
-    def __init__(
-            self, 
-            behavior_activation_timeout: float = 60.0, 
-            cache_animation_lists: bool = False
-    ) -> None:
+    def get_battery_details(self) -> None:
+        self.battery_state_task = self.robot.get_battery_state()
 
-        args = anki_vector.util.parse_command_args()
-        self.robot = anki_vector.AsyncRobot(
-            args.serial,
-            behavior_control_level=ControlPriorityLevel.OVERRIDE_BEHAVIORS_PRIORITY,
-            behavior_activation_timeout=behavior_activation_timeout,
-            cache_animation_lists=cache_animation_lists
-        )
+        while True:
+            if self.battery_state_task.done():
+                self.battery_state = self.battery_state_task.result()
+                self.battery_state_task = self.robot.get_battery_state()
+                break
+            time.sleep(0.25)
 
-        self.robot.connect()
-        # Initialize the camera feed
-        self.robot.camera.init_camera_feed()
+        if self.battery_state:
+            self.batt = self.battery_state.battery_level
 
+    def load_animations(self) -> None:
         # Load the animation triggers
         result = self.robot.anim.load_animation_list()
         while True:
@@ -65,9 +61,32 @@ class VectorBot:
             except:
                 # print(traceback.format_exc())
                 pass
+        
+    def __init__(
+            self, 
+            behavior_activation_timeout: float = 60.0, 
+            cache_animation_lists: bool = False
+    ) -> None:
+
+        args = anki_vector.util.parse_command_args()
+        self.robot = anki_vector.AsyncRobot(
+            args.serial,
+            behavior_control_level=ControlPriorityLevel.OVERRIDE_BEHAVIORS_PRIORITY,
+            behavior_activation_timeout=behavior_activation_timeout,
+            cache_animation_lists=cache_animation_lists
+        )
+
+        self.robot.connect()
+        
+        # Get the battery level
+        self.battery_level = 0
+        self.get_battery_details()
+
+        # Initialize the camera feed
+        self.robot.camera.init_camera_feed()
 
         # Get off the charger
-        if self.robot.status.is_on_charger:
+        if self.robot.status.is_on_charger and self.battery_level > 25:
             self.robot.behavior.drive_off_charger()
         
     def __del__(self) -> None:
@@ -100,7 +119,7 @@ class Data:
 class Action:
     def __init__(self, robot: anki_vector.Robot) -> None:
         self.robot = robot
-    
+        self.prev_emote = None
     @sleep
     @latency
     def tts(self, text: str) -> None:
@@ -114,6 +133,9 @@ class Action:
     
     @sleep
     @latency
-    def animation(self, name: str) -> None:
+    def emote(self, name: str) -> None:
+        if self.prev_emote == name:
+            return
+        self.prev_emote = name
         print("Playing Animation: {}".format(name))
         self.robot.anim.play_animation_trigger(name)
