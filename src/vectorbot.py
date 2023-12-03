@@ -149,3 +149,65 @@ class Action:
         self.prev_emote = name
         print("Playing Animation: {}".format(name))
         self.robot.anim.play_animation_trigger(name)
+    
+    @sleep
+    @latency
+    def manage_commands(self, commands: list, t: int = 2) -> None:
+        
+        def _drive(left: int, right: int) -> None:
+            self.robot.motors.set_wheel_motors(left, right)
+        def _face(angle: int) -> None:
+            self.robot.motors.set_head_motor(angle)
+        def _lift(angle: int) -> None:
+            self.robot.motors.set_lift_motor(angle)
+
+        emotions = {
+            'HAPPY': 'ComeHereSuccess',
+            'SAD': 'FacePlantRoll',
+            'ANGRY': 'Feedback_ShutUp',
+            'SURPRISED': 'TakeAPictureFocusing',
+            'DISGUSTED': 'MeetVictorConfusion',
+            'SASSY': 'PettingBlissGetout',
+            'EYEROLL': 'Feedback_ShutUp',
+            'NEUTRAL': 'NeutralFace'
+        }
+
+        for command in commands:
+            print('Command: {}'.format(command))
+
+            if 'STOP' in command:
+                pass
+            elif 'DETECT' in command:
+                pass
+            elif 'EMOTE' in command:
+                emo = command.split("_")[1]
+                self.emote(emotions[emo])
+            else:
+                direction, t = command.rsplit("_")
+                t = int(t)
+     
+                if direction == "FRWD":
+                    _drive(100, 100)
+                elif direction == "BACK":
+                    _drive(-100, -100)
+                elif direction == "LEFT":
+                    _drive(-100, 100)
+                elif direction == "RIGHT":
+                    _drive(100, -100)
+                elif direction == "CLAWUP":
+                    _lift(5)
+                elif direction == "CLAWDOWN":
+                    _lift(-5)
+                elif direction == "LOOK_P":
+                    _face(5)
+                elif direction == "LOOKDOWN":
+                    _face(-5)
+                elif direction == "STOP":
+                    _drive(0, 0)
+                    _face(0)
+                    _lift(0)
+                
+            time.sleep(t)
+            _drive(0, 0)
+            _face(0)
+            _lift(0)

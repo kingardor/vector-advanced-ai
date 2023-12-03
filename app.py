@@ -1,5 +1,6 @@
 import sys
 sys.path.insert(1, 'src')
+from typing import Tuple
 import time
 from threading import Thread
 from queue import Queue
@@ -12,9 +13,7 @@ from vectorbot import VectorBot, Data, Action
 from speechstream import StreamHandler
 from customgpt import CustomGPT
 
-commandqueue = Queue()
-
-def parse_commands(text: str) -> str:
+def parse_commands(text: str) -> Tuple[str, list]:
     # Remove all \n and \t
     text = text.replace("\n", "")
     text = text.replace("\t", "")
@@ -22,19 +21,19 @@ def parse_commands(text: str) -> str:
     # Replace AI with A.I.
     text = text.replace("AI", "A.I.")
 
+    # Remove all text between * and *
+    remove = re.sub(r'\*(.*?)\*', '', text)
+    for r in remove:
+        text = text.replace(f"*{r}*", "")
+
     # Extract all text between @ and @
     commands = re.findall(r'@(.*?)@', text) 
-
-    # Add all commands to queue
-    for command in commands:
-        commandqueue.put(command)
     
     # Remove all commands from text
     for command in commands:
-        text = text.replace(f"!{command}!", "")
+        text = text.replace(f"@{command}@", "")
     
-    print(commandqueue.queue)
-    return text
+    return text, commands
    
 def conversation(
         ui: UserInterface,
@@ -62,11 +61,12 @@ def conversation(
             robot_action.emote('KnowledgeGraphListening')
             robot_output = gpt.get_answer(user_input)
             robot_action.emote('KnowledgeGraphSearchingGetOutSuccess')
-            robot_output = parse_commands(robot_output)
+            robot_output, commands = parse_commands(robot_output)
             robot_action.tts(robot_output)
             robot_action.emote('NeutralFace')
             ui.add_text("Vector", robot_output)
-            
+            robot_action.manage_commands(commands)
+
         time.sleep(0.25)
 
 def main():
