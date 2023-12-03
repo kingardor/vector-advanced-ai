@@ -90,11 +90,15 @@ class VectorBot:
 
         # Get off the charger
         # Battery levels are 0, 1, 2, 3
-        if self.robot.status.is_on_charger and self.battery_level > 1:
-            self.robot.behavior.drive_off_charger()
+        print(self.battery_level)
+        if self.robot.status.is_on_charger:
+            if self.battery_level > 1:
+                self.robot.behavior.drive_off_charger()
+            else:
+                print(f"Battery level {self.battery_level} too low to drive off charger")
         else:
-            print(f"Battery level {self.battery_level} too low to drive off charger")
-        
+            print("Vector is not on the charger")
+            
     def __del__(self) -> None:
         self.robot.disconnect()
         
