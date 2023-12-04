@@ -13,6 +13,11 @@ class HootHoot:
             image_encoder_engine: str = "engines/owlvit_image_encoder_patch32.engine"
     ) -> None:
         
+        self.prompt = '[]'
+        self.tree = None
+        self.clip_text_encodings = None
+        self.owl_text_encodings = None
+    
         self.owl_predictor = OwlPredictor(
             model_name=model,
             device="cuda"
@@ -44,7 +49,14 @@ class HootHoot:
                 image_encoder_engine=image_encoder_engine
             )
         )
+
+        self.update_encodings(self.prompt)
     
+    def update_encodings(self, prompt: str) -> None:
+        self.tree = Tree.from_prompt(prompt)
+        self.clip_text_encodings = self.predictor.encode_clip_text(self.tree)
+        self.owl_text_encodings = self.predictor.encode_owl_text(self.tree)
+
     def predict(
             self, 
             image: PIL.Image.Image, 
@@ -52,18 +64,18 @@ class HootHoot:
             threshold: float = 0.1
         ) -> Tuple[dict, PIL.Image.Image]:
 
-        tree = Tree.from_prompt(prompt)
-        clip_text_encodings = self.predictor.encode_clip_text(tree)
-        owl_text_encodings = self.predictor.encode_owl_text(tree)
+        if not self.prompt == prompt:
+            self.prompt = prompt
+            self.update_encodings(self.prompt)
 
         output = self.predictor.predict(
             image=image, 
-            tree=tree,
-            clip_text_encodings=clip_text_encodings,
-            owl_text_encodings=owl_text_encodings,
+            tree=self.tree,
+            clip_text_encodings=self.clip_text_encodings,
+            owl_text_encodings=self.owl_text_encodings,
             threshold=threshold
         )
 
-        image = draw_tree_output(image, output, tree=tree, draw_text=True)
+        image = draw_tree_output(image, output, tree=self.tree, draw_text=True)
 
         return output, image
