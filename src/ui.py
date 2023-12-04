@@ -1,5 +1,8 @@
 import customtkinter
 from customtkinter import END
+import numpy as np
+import cv2
+import PIL.Image
 
 class UserInterface:
 	def start_ui(self) -> None:
@@ -17,6 +20,18 @@ class UserInterface:
 
 	def add_text(self, type:str, text: str) -> None:
 		self.my_text.insert(END, f"\n\n{type}: {text}")
+	
+	def update_frame(self):
+		if not isinstance(self.frame, type(None)):
+			h, w = self.frame.size
+			photo = customtkinter.CTkImage(
+				self.frame,
+				size=(int(w*0.75),int(h*0.75))
+			)
+			self.camera.configure(image=photo)
+			self.camera.image = photo
+			self.frame = None
+		self.camera.after(250, self.update_frame)
 
 	def construct_ui(self) -> None:
 		# Create Text Frame
@@ -80,7 +95,7 @@ class UserInterface:
 		self.camera = customtkinter.CTkLabel(
             master=self.app,
             width=400,
-            height=400,
+            height=255,
             text=""
         )
 		self.camera.pack(pady=10)
@@ -89,6 +104,9 @@ class UserInterface:
 		self.app = customtkinter.CTk()
 		self.app.title("VectorBot AI")
 		self.app.geometry('500x1000')
+
+		self.frame = None
+
 		self.my_text = None
 		self.chat_entry = None
 		self.camera = None
@@ -98,4 +116,6 @@ class UserInterface:
 
 		self.construct_ui()
 		self.my_text.insert(END, "Vector: Hey, human! I'm VectorBot, your personal AI assistant!\n\n")
+
+		self.update_frame()
         
